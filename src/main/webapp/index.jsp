@@ -4,111 +4,109 @@
 <html>
 <head>
 <title>Apache Tomcat WebSocket Examples: Chat</title>
-<style type="text/css">
-input#chat {
-	width: 410px
-}
-
-#console-container {
-	width: 400px;
-}
-
-#console {
-	border: 1px solid #CCCCCC;
-	border-right-color: #999999;
-	border-bottom-color: #999999;
-	height: 170px;
-	overflow-y: scroll;
-	padding: 5px;
-	width: 100%;
-}
-
-#console p {
-	padding: 0;
-	margin: 0;
-}
-</style>
-<script type="text/javascript">
-	var Chat = {};
-
-	Chat.socket = null;
-
-	Chat.connect = (function(host) {
-		if ('WebSocket' in window) {
-			Chat.socket = new WebSocket(host);
-		} else if ('MozWebSocket' in window) {
-			Chat.socket = new MozWebSocket(host);
-		} else {
-			Console.log('Error: WebSocket is not supported by this browser.');
-			return;
-		}
-
-		Chat.socket.onopen = function() {
-			Console.log('Info: WebSocket connection opened.');
-			document.getElementById('chat').onkeydown = function(event) {
-				if (event.keyCode == 13) {
-					Chat.sendMessage();
-				}
-			};
-		};
-
-		Chat.socket.onclose = function() {
-			document.getElementById('chat').onkeydown = null;
-			Console.log('Info: WebSocket closed.');
-		};
-
-		Chat.socket.onmessage = function(message) {
-			Console.log(message.data);
-		};
+<script type="text/javascript" src="jquery-1.10.2.min.js"></script>
+<script>
+	var wsocket;
+	var serviceLocation = "ws://localhost:8080/JavaEE/chat/";
+	var $nickName;
+	var $message;
+	var $chatWindow;
+	var room = '';
+ 
+	function onMessageReceived(evt) {
+		//var msg = eval('(' + evt.data + ')');
+		var msg = JSON.parse(evt.data); // native API
+		var $messageLine = $('<tr><td class="received">' + msg.received
+				+ '</td><td class="user label label-info">' + msg.sender
+				+ '</td><td class="message badge">' + msg.message
+				+ '</td></tr>');
+		$chatWindow.append($messageLine);
+	}
+	function sendMessage() {
+		var msg = '{"message":"' + $message.val() + '", "sender":"'
+				+ $nickName.val() + '", "received":null}';
+		wsocket.send(msg);
+		$message.val('').focus();
+	}
+ 
+	function connectToChatserver() {
+		room = $('#chatroom option:selected').val();
+		wsocket = new WebSocket(serviceLocation + room);
+		wsocket.onmessage = onMessageReceived;
+	}
+ 
+	function leaveRoom() {
+		wsocket.close();
+		$chatWindow.empty();
+		$('.chat-wrapper').hide();
+		$('.chat-signin').show();
+		$nickName.focus();
+	}
+ 
+	$(document).ready(function() {
+		$nickName = $('#nickname');
+		$message = $('#message');
+		$chatWindow = $('#response');
+		$('.chat-wrapper').hide();
+		$nickName.focus();
+ 
+		$('#enterRoom').click(function(evt) {
+			evt.preventDefault();
+			connectToChatserver();
+			$('.chat-wrapper h2').text('Chat # '+$nickName.val() + "@" + room);
+			$('.chat-signin').hide();
+			$('.chat-wrapper').show();
+			$message.focus();
+		});
+		$('#do-chat').submit(function(evt) {
+			evt.preventDefault();
+			sendMessage()
+		});
+ 
+		$('#leave-room').click(function(){
+			leaveRoom();
+		});
 	});
-
-	Chat.initialize = function() {
-		if (window.location.protocol == 'http:') {
-			Chat.connect('ws://' + window.location.host + '/JavaEE/chat/newRoom');
-		} else {
-			Chat.connect('wss://' + window.location.host + '/JavaEE/chat/newRoom');
-		}
-	};
-
-	Chat.sendMessage = (function() {
-		var message = document.getElementById('chat').value;
-		if (message != '') {
-			Chat.socket.send(message);
-			document.getElementById('chat').value = '';
-		}
-	});
-
-	var Console = {};
-
-	Console.log = (function(message) {
-		var console = document.getElementById('console');
-		var p = document.createElement('p');
-		p.style.wordWrap = 'break-word';
-		p.innerHTML = message;
-		console.appendChild(p);
-		while (console.childNodes.length > 25) {
-			console.removeChild(console.firstChild);
-		}
-		console.scrollTop = console.scrollHeight;
-	});
-
-	Chat.initialize();
 </script>
 </head>
+ 
 <body>
-	<noscript>
-		<h2 style="color: #ff0000">Seems your browser doesn't support
-			Javascript! Websockets rely on Javascript being enabled. Please
-			enable Javascript and reload this page!</h2>
-	</noscript>
-	<div>
-		<p>
-			<input type="text" placeholder="type and press enter to chat"
-				id="chat">
-		</p>
-		<div id="console-container">
-			<div id="console"></div>
-		</div>
+ 
+	<div class="container chat-signin">
+		<form class="form-signin">
+			<h2 class="form-signin-heading">Chat sign in</h2>
+			<label for="nickname">Nickname</label> <input type="text"
+				class="input-block-level" placeholder="Nickname" id="nickname">
+			<div class="btn-group">
+				<label for="chatroom">Chatroom</label> <select size="1"
+					id="chatroom">
+					<option>arduino</option>
+					<option>java</option>
+					<option>groovy</option>
+					<option>scala</option>
+				</select>
+			</div>
+			<button class="btn btn-large btn-primary" type="submit"
+				id="enterRoom">Sign in</button>
+		</form>
+	</div>
+	<!-- /container -->
+ 
+	<div class="container chat-wrapper">
+		<form id="do-chat">
+			<h2 class="alert alert-success"></h2>
+			<table id="response" class="table table-bordered"></table>
+			<fieldset>
+				<legend>Enter your message..</legend>
+				<div class="controls">
+					<input type="text" class="input-block-level" placeholder="Your message..." id="message" style="height:60px"/>
+					<input type="submit" class="btn btn-large btn-block btn-primary"
+						value="Send message" />
+					<button class="btn btn-large btn-block" type="button" id="leave-room">Leave
+						room</button>
+				</div>
+			</fieldset>
+		</form>
 	</div>
 </body>
 </html>

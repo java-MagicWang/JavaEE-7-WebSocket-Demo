@@ -1,25 +1,41 @@
 package com.wxd.websocket.bean;
 
+import java.util.Date;
+
 public class Message {
     
-    private String id;
+    private String message;
     
-    private String value;
+    private String sender;
     
-    public String getId() {
-        return id;
+    private Date received;
+    
+    public String getMessage() {
+        return message;
     }
     
-    public void setId(String id) {
-        this.id = id;
+    public void setMessage(String message) {
+        this.message = message;
     }
     
-    public String getValue() {
-        return value;
+    public String getSender() {
+        return sender;
     }
     
-    public void setValue(String value) {
-        this.value = value;
+    public void setSender(String sender) {
+        this.sender = sender;
     }
     
+    public Date getReceived() {
+        return received;
+    }
+    
+    public void setReceived(Date received) {
+        this.received = received;
+    }
+    
+    @Override
+    public String toString() {
+        return "sender: " + this.sender + "\nmessage: " + this.message + "\ntime: " + this.received;
+    }
 }
